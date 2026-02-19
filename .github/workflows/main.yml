@@ -25,8 +25,7 @@ jobs:
         with:
           java-version: '17'
           distribution: 'zulu'
-          cache: 'maven' # Optimisation : gère le cache Maven automatiquement
-
+          
       # 3️⃣ Cache SonarQube pour accélérer les analyses futures
       - name: Cache SonarQube packages
         uses: actions/cache@v4
