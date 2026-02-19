@@ -19,19 +19,19 @@ jobs:
         - uses: actions/checkout@v4
 
         - name: 2. Setup Java JDK 17
-          uses: actions/setup-java@v4
+        - uses: actions/setup-java@v4
           with:
-          java-version: '17'
-          distribution: 'zulu'
+            java-version: '17'
+            distribution: 'zulu'
 
          #name: 3. Connexion Docker Hub
-          uses: docker/login-action@v3
+        - uses: docker/login-action@v3
           with:
-            username: ${{ secrets.DOCKERHUB_USERNAME }}
-            password: ${{ secrets.DOCKERHUB_TOKEN }}
+                username: ${{ secrets.DOCKERHUB_USERNAME }}
+                password: ${{ secrets.DOCKERHUB_TOKEN }}
 
          #name: 4. Build et Push Docker
-            run: |
+          run: |
               docker build -t salam630/jpetstore-groupe-app:latest .
               docker push salam630/jpetstore-groupe-app:latest
 
@@ -46,12 +46,12 @@ jobs:
               fi
 
           # name: 6. Deploiement SSH sur AWS
-          uses: appleboy/ssh-action@master
+        - uses: appleboy/ssh-action@master
           with:
-          host: 16.16.67.62
-          username: ubuntu
-          key: ${{ secrets.SSH_PRIVATE_KEY }}
-          script: |
+           host: 16.16.67.62
+           username: ubuntu
+           key: ${{ secrets.SSH_PRIVATE_KEY }}
+           script: |
             Sudo docker pull salam630/jpetstore-groupe-app:latest
             sudo docker stop petshop || true
             sudo docker rm petshop || true
