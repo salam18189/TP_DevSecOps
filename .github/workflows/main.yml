@@ -1,85 +1,38 @@
-name: Build, Security Scan and Analyze
-
-on:
-  push:
-    branches:
-      - main
-  pull_request:
-    branches:
-      - main
-
-jobs:
-  build:
-    name: Build, Trivy Scan and SonarQube Analysis
-    runs-on: ubuntu-latest
-
-    steps:
-      # 1️⃣ Checkout du code
-      - uses: actions/checkout@v4
-        with:
-          fetch-depth: 0
-
-      # 2️⃣ Installer Java 17 (Nécessaire pour JPetStore qui est en Java)
-      - name: Set up JDK 17
-        uses: actions/setup-java@v4
-        with:
-          java-version: '17'
-          distribution: 'zulu'
-          cache: 'maven' # Optimisation : gère le cache Maven automatiquement
-
-      # 3️⃣ Cache SonarQube pour accélérer les analyses futures
-      - name: Cache SonarQube packages
-        uses: actions/cache@v4
-        with:
-          path: ~/.sonar/cache
-          key: ${{ runner.os }}-sonar
-          restore-keys: ${{ runner.os }}-sonar
-
-      # 4️⃣ Build Maven
-      - name: Build project
-        run: mvn -B verify -Dmaven.test.failure.ignore=true
-
-      # 5️⃣ Scan du code source avec Trivy
-      - name: Trivy FS Scan (Code + Dependencies)
-        uses: aquasecurity/trivy-action@0.20.0
-        with:
-          scan-type: 'fs'
-          scan-ref: '.'
-          severity: 'HIGH,CRITICAL'
-          ignore-unfixed: true
-          exit-code: '0'
-          format: 'table'
-
-      # 6️⃣ Scan de l'image Docker existante
-      - name: Trivy Image Scan (DockerHub)
-        uses: aquasecurity/trivy-action@0.20.0
-        with:
-          image-ref: 'salam630/jpetstore-groupe-app:latest'
-          severity: 'HIGH,CRITICAL'
-          ignore-unfixed: true
-          exit-code: '0'
-          format: 'table'
-
-      # 7️⃣ Analyse SonarQube
-      - name: SonarQube analysis
+    push: 
+    branches: [ main ]
+    jobs: 
+        pipeline: 
+        runs-on: ubuntu-latest 
+        steps: 
+        -name: 1. Recuperation du code 
+        uses: actions/checkout@v4 
+        -name: 2. Setup JDK 17 
+        uses: actions/setup-java@v4 
+        with: 
+        java-version: '17'
+        distribution: 'zulu'
+        -name: 3. Analyse SonarQube 
         env:
-          SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
-          SONAR_HOST_URL: ${{ secrets.SONAR_HOST_URL }}
+        SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }} 
         run: |
-          cd mon_jpetstore
-          mvn org.sonarsource.scanner.maven:sonar-maven-plugin:sonar \
-            -Dsonar.projectKey=TP-Sonarqube \
-            -Dsonar.projectName='TP-Sonarqube'
-      
-      
-      - name: Deploiement sur EC2 via SSH
+          cd mon_jpestore 
+          mvn sonar:sonar -Dsonar.host.url= -Dsonar.projectKey=TP-Sonarqube
+     
+        -name: 4. Build et Push Docker 
+        run: | 
+          cd mon_jpestore
+          echo "${{ secrets.DOCKERHUB_TOKEN }}" |
+          docker login -u "${{ secrets.DOCKERHUB_USERNAME }}" --password-stdin 
+          docker build -t salam630/jpetstore-groupe-app:latest . 
+          docker push salam630/jpetstore-groupe-app:latest
+        -name: 5. Deploiement sur EC2 
         uses: appleboy/ssh-action@master
         with:
-          host: 16.16.67.62
-          username: ubuntu
-          key: ${{ secrets.SSH_PRIVATE_KEY }}
+        host: 16.16.67.62
+        username: ubuntu
+        key: ${{ secrets.SSH_PRIVATE_KEY }} 
         script: |
-              sudo docker pull salam630/jpetstore-groupe-app:latest
-              sudo docker stop petshop || true
-              sudo docker rm petshop || true
-              sudo docker run -d --name petshop -p 80:8080 salam630/jpetstore-groupe-app:latest
+            sudo docker pull salam630/jpetstore-groupe-app:latest
+             sudo docker stop petshop || true 
+             sudo docker rm petshop || true 
+             sudo docker run -d --name petshop -p 80:8080 salam630/jpetstore-groupe-app:latest
